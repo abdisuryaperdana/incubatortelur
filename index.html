@@ -1,0 +1,446 @@
+<!DOCTYPE HTML><html>
+<!-- Rui Santos - Complete project details at https://RandomNerdTutorials.com
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files.
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software. -->
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://code.highcharts.com/highcharts.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <style>
+    body {
+      min-width: 310px;
+    	max-width: 800px;
+    	height: 400px;
+      margin: 0 auto;
+    }
+    h2 {
+      font-family: Arial;
+      font-size: 2.5rem;
+      text-align: center;
+    }
+    .image-container {
+                position: relative;
+                min-width: 160px
+            }
+
+    .close {
+        position: absolute;
+        right: 5px;
+        top: 5px;
+        background: #ff3034;
+        width: 16px;
+        height: 16px;
+        border-radius: 100px;
+        color: #fff;
+        text-align: center;
+        line-height: 18px;
+        cursor: pointer
+    }
+  </style>
+</head>
+<body>
+  <h2>Inkubator Telur dengan IoT</h2>
+  <center>
+    <h1>Setpoint Suhu saat ini: <span id="setpoint-suhu">[Suhu Saat Ini]</span></h1>
+    <form action="/get" method="get">
+      <h4>Ubah Setpoint Suhu Serial</h4>
+      Setpoint Suhu: <input type="number" name="input1" placeholder="Setpoint Suhu">
+      <input type="submit" value="Submit" id="submitButton">
+    </form>
+    
+    <br>
+
+    <form method="post" action="setpoint.php">
+      <label for="setpoint">Setpoint:</label>
+      <input type="number" name="setpoint" placeholder="Setpoint Suhu" required>
+      <button type="submit">Submit</button>
+    </form>
+
+    <br>
+    
+    <form id="antaresForm">
+      <label for="setpoint">Setpoint:</label>
+      <input type="number" id="setpoint" placeholder="Setpoint Suhu Antares" name="setpoint">
+      <button type="button" onclick="sendData()">Submit</button>
+    </form>
+  
+  </center>
+  <br>
+  <br>
+  <div id="chart-temperature" class="container"></div>
+  <div id="chart-humidity" class="container"></div>
+  
+  <br>
+  <br>
+
+  <!-- <figure>
+    <div id="stream-container" class="image-container">
+        <div class="close" id="close-stream">�</div>
+        <img id="stream" src="http://192.168.233.36:81/stream">
+    </div>
+  </figure> -->
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head><body>
+</body>
+<script>
+  function sendData() {
+      var setValue = document.getElementById("setpoint").value;
+      var method = "POST";
+      var url = "https://platform.antares.id:8443/~/antares-cse/cnt-vq61Tfp8PyosvKBb/";
+      var xhr = new XMLHttpRequest();
+
+      xhr.open(method, url);
+
+      xhr.setRequestHeader("X-M2M-Origin", "2943a4cc68ecba07:99a731b711abe367");
+      xhr.setRequestHeader("Content-Type", "application/json;ty=4");
+      xhr.setRequestHeader("Accept", "application/json");
+      xhr.setRequestHeader("Access-Control-Allow-Origin", "*");
+      xhr.setRequestHeader("Access-Control-Allow-Origin", "https://platform.antares.id:8443/~/antares-cse/cnt-vq61Tfp8PyosvKBb/");
+      xhr.setRequestHeader("Access-Control-Allow-Methods", "POST");
+      xhr.setRequestHeader("Access-Control-Allow-Headers", "Content-Type");
+    
+      var data = {
+          "m2m:cin": {
+          "con": "{\"setpoint\":\"" + setValue + "\"}"
+        }
+      };
+      
+      xhr.send(data);
+  }
+</script>
+<script>
+  var userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  var chartT = new Highcharts.Chart({
+  chart:{ renderTo : 'chart-temperature' },
+  title: { text: 'DHT11 Temperature' },
+  series: [{
+    showInLegend: false,
+    data: []
+  }],
+  plotOptions: {
+    line: { animation: false,
+      dataLabels: { enabled: true }
+    },
+    series: { color: '#059e8a' }
+  },
+  xAxis: {
+    type: 'datetime',
+    dateTimeLabelFormats: {
+      hour: '%H:%M:%S'
+    },
+    timeZone: userTimezone  // Menggunakan zona waktu perangkat pengguna
+  },
+  yAxis: {
+    title: { text: 'Temperature (Celsius)' },
+  },
+  credits: { enabled: false }
+});
+setInterval(function ( ) {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      var x = (new Date()).getTime(),
+          y = parseFloat(this.responseText);
+      //console.log(this.responseText);
+      if(chartT.series[0].data.length > 40) {
+        chartT.series[0].addPoint([x, y], true, true, true);
+      } else {
+        chartT.series[0].addPoint([x, y], true, false, true);
+      }
+    }
+  };
+  xhttp.open("GET", "/temperature", true);
+  xhttp.send();
+}, 3000 ) ;
+
+var chartH = new Highcharts.Chart({
+  chart:{ renderTo:'chart-humidity' },
+  title: { text: 'DHT11 Humidity' },
+  series: [{
+    showInLegend: false,
+    data: []
+  }],
+  plotOptions: {
+    line: { animation: false,
+      dataLabels: { enabled: true }
+    }
+  },
+  xAxis: {
+    type: 'datetime',
+    dateTimeLabelFormats: { second: '%H:%M:%S' }
+  },
+  yAxis: {
+    title: { text: 'Humidity (%)' }
+  },
+  credits: { enabled: false }
+});
+setInterval(function ( ) {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      var x = (new Date()).getTime(),
+          y = parseFloat(this.responseText);
+      //console.log(this.responseText);
+      if(chartH.series[0].data.length > 40) {
+        chartH.series[0].addPoint([x, y], true, true, true);
+      } else {
+        chartH.series[0].addPoint([x, y], true, false, true);
+      }
+    }
+  };
+  xhttp.open("GET", "/humidity", true);
+  xhttp.send();
+}, 3000 ) ;
+</script>
+
+<script>
+  function performGetSetpoint() {
+    fetch('/getSetpoint') // Buat endpoint baru untuk mengambil setpoint
+      .then(response => response.text())
+      .then(data => {
+        document.getElementById('setpoint-suhu').innerText = data;
+      });
+  }
+
+  // Panggil performGetSetpoint saat halaman dimuat
+  window.onload = function () {
+    performGetSetpoint();
+  };
+</script>
+
+
+
+<!-- ESP32 Cam -->
+<script>
+  document.addEventListener('DOMContentLoaded', function (event) {
+  var baseHost = document.location.origin
+  var streamUrl = baseHost + ':81'
+
+  const hide = el => {
+    el.classList.add('hidden')
+  }
+  const show = el => {
+    el.classList.remove('hidden')
+  }
+
+  const disable = el => {
+    el.classList.add('disabled')
+    el.disabled = true
+  }
+
+  const enable = el => {
+    el.classList.remove('disabled')
+    el.disabled = false
+  }
+
+  const updateValue = (el, value, updateRemote) => {
+    updateRemote = updateRemote == null ? true : updateRemote
+    let initialValue
+    if (el.type === 'checkbox') {
+      initialValue = el.checked
+      value = !!value
+      el.checked = value
+    } else {
+      initialValue = el.value
+      el.value = value
+    }
+
+    if (updateRemote && initialValue !== value) {
+      updateConfig(el);
+    } else if(!updateRemote){
+      if(el.id === "aec"){
+        value ? hide(exposure) : show(exposure)
+      } else if(el.id === "agc"){
+        if (value) {
+          show(gainCeiling)
+          hide(agcGain)
+        } else {
+          hide(gainCeiling)
+          show(agcGain)
+        }
+      } else if(el.id === "awb_gain"){
+        value ? show(wb) : hide(wb)
+      } else if(el.id === "face_recognize"){
+        value ? enable(enrollButton) : disable(enrollButton)
+      }
+    }
+  }
+
+  function updateConfig (el) {
+    let value
+    switch (el.type) {
+      case 'checkbox':
+        value = el.checked ? 1 : 0
+        break
+      case 'range':
+      case 'select-one':
+        value = el.value
+        break
+      case 'button':
+      case 'submit':
+        value = '1'
+        break
+      default:
+        return
+    }
+
+    const query = `${baseHost}/control?var=${el.id}&val=${value}`
+
+    fetch(query)
+      .then(response => {
+        console.log(`request to ${query} finished, status: ${response.status}`)
+      })
+  }
+
+  document
+    .querySelectorAll('.close')
+    .forEach(el => {
+      el.onclick = () => {
+        hide(el.parentNode)
+      }
+    })
+
+  // read initial values
+  fetch(`${baseHost}/status`)
+    .then(function (response) {
+      return response.json()
+    })
+    .then(function (state) {
+      document
+        .querySelectorAll('.default-action')
+        .forEach(el => {
+          updateValue(el, state[el.id], false)
+        })
+    })
+
+  const view = document.getElementById('stream')
+  const viewContainer = document.getElementById('stream-container')
+  const stillButton = document.getElementById('get-still')
+  const streamButton = document.getElementById('toggle-stream')
+  const enrollButton = document.getElementById('face_enroll')
+  const closeButton = document.getElementById('close-stream')
+
+  const stopStream = () => {
+    window.stop();
+    streamButton.innerHTML = 'Start Stream'
+  }
+
+  const startStream = () => {
+    view.src = `${streamUrl}/stream`
+    show(viewContainer)
+    streamButton.innerHTML = 'Stop Stream'
+  }
+
+  // Attach actions to buttons
+  stillButton.onclick = () => {
+    stopStream()
+    view.src = `${baseHost}/capture?_cb=${Date.now()}`
+    show(viewContainer)
+  }
+
+  closeButton.onclick = () => {
+    stopStream()
+    hide(viewContainer)
+  }
+
+  streamButton.onclick = () => {
+    const streamEnabled = streamButton.innerHTML === 'Stop Stream'
+    if (streamEnabled) {
+      stopStream()
+    } else {
+      startStream()
+    }
+  }
+
+  enrollButton.onclick = () => {
+    updateConfig(enrollButton)
+  }
+
+  // Attach default on change action
+  document
+    .querySelectorAll('.default-action')
+    .forEach(el => {
+      el.onchange = () => updateConfig(el)
+    })
+
+  // Custom actions
+  // Gain
+  const agc = document.getElementById('agc')
+  const agcGain = document.getElementById('agc_gain-group')
+  const gainCeiling = document.getElementById('gainceiling-group')
+  agc.onchange = () => {
+    updateConfig(agc)
+    if (agc.checked) {
+      show(gainCeiling)
+      hide(agcGain)
+    } else {
+      hide(gainCeiling)
+      show(agcGain)
+    }
+  }
+
+  // Exposure
+  const aec = document.getElementById('aec')
+  const exposure = document.getElementById('aec_value-group')
+  aec.onchange = () => {
+    updateConfig(aec)
+    aec.checked ? hide(exposure) : show(exposure)
+  }
+
+  // AWB
+  const awb = document.getElementById('awb_gain')
+  const wb = document.getElementById('wb_mode-group')
+  awb.onchange = () => {
+    updateConfig(awb)
+    awb.checked ? show(wb) : hide(wb)
+  }
+
+  // Detection and framesize
+  const detect = document.getElementById('face_detect')
+  const recognize = document.getElementById('face_recognize')
+  const framesize = document.getElementById('framesize')
+
+  framesize.onchange = () => {
+    updateConfig(framesize)
+    if (framesize.value > 5) {
+      updateValue(detect, false)
+      updateValue(recognize, false)
+    }
+  }
+
+  detect.onchange = () => {
+    if (framesize.value > 5) {
+      alert("Please select CIF or lower resolution before enabling this feature!");
+      updateValue(detect, false)
+      return;
+    }
+    updateConfig(detect)
+    if (!detect.checked) {
+      disable(enrollButton)
+      updateValue(recognize, false)
+    }
+  }
+
+  recognize.onchange = () => {
+    if (framesize.value > 5) {
+      alert("Please select CIF or lower resolution before enabling this feature!");
+      updateValue(recognize, false)
+      return;
+    }
+    updateConfig(recognize)
+    if (recognize.checked) {
+      enable(enrollButton)
+      updateValue(detect, true)
+    } else {
+      disable(enrollButton)
+    }
+  }
+})
+
+        </script>
+
+</html>
